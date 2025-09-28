@@ -1,0 +1,263 @@
+import java.util.ArrayList;
+import java.util.List;
+
+public class DesignPatternDemo {
+
+    public static void main(String[] args) {
+        System.out.println("========================================");
+        System.out.println("  DEMOSTRATING SIX DESIGN PATTERNS");
+        System.out.println("========================================");
+
+        
+
+        // 1. Observer Pattern Demo (Stock Ticker)
+        runObserverDemo();
+
+        // 2. Strategy Pattern Demo (Payment Gateway)
+        runStrategyDemo();
+
+        // --- CREATIONAL PATTERNS ---
+
+        // 3. Singleton Pattern Demo (Logging Service)
+        runSingletonDemo();
+
+        // 4. Factory Method Pattern Demo (Document Generation)
+        runFactoryMethodDemo();
+
+        // --- STRUCTURAL PATTERNS ---
+
+        // 5. Adapter Pattern Demo (Legacy API Integration)
+        runAdapterDemo();
+
+        // 6. Decorator Pattern Demo (Coffee Order System)
+        runDecoratorDemo();
+    }
+
+    // =====================================================================
+    // 1. OBSERVER PATTERN DEMO (Behavioral)
+    // =====================================================================
+    private static void runObserverDemo() {
+        System.out.println("\n--- 1. Observer Pattern: Real-Time Stock Ticker ---");
+        
+        StockTicker tesla = new StockTicker("TSLA", 100.00);
+        Observer chart = new PriceChartWidget("Main Dashboard Chart");
+        Observer alert = new AlertSystem();
+
+        tesla.attach(chart);
+        tesla.attach(alert);
+        tesla.setPrice(102.50);
+        tesla.setPrice(106.00); // Triggers alert
+        tesla.detach(alert);
+        tesla.setPrice(104.00); // Does not trigger alert now
+    }
+
+    // Subject/Observer Interfaces and Classes for Observer Pattern
+    interface Stock { void attach(Observer o); void detach(Observer o); void notifyObservers(); void setPrice(double price); }
+    interface Observer { void update(double price); }
+    
+    static class StockTicker implements Stock {
+        private List<Observer> observers = new ArrayList<>();
+        private double price;
+        private String symbol;
+        public StockTicker(String symbol, double initialPrice) { this.symbol = symbol; this.price = initialPrice; }
+        public void attach(Observer o) { observers.add(o); }
+        public void detach(Observer o) { observers.remove(o); }
+        public void notifyObservers() { for (Observer o : observers) { o.update(this.price); } }
+        public void setPrice(double newPrice) {
+            this.price = newPrice;
+            System.out.println("\n[Stock Ticker] Price updated for " + symbol + ": $" + newPrice);
+            notifyObservers();
+        }
+    }
+    static class PriceChartWidget implements Observer {
+        private String name;
+        public PriceChartWidget(String name) { this.name = name; }
+        public void update(double price) { System.out.println(name + ": Updating chart visualization for new price $" + price); }
+    }
+    static class AlertSystem implements Observer {
+        private static final double ALERT_THRESHOLD = 105.00;
+        public void update(double price) {
+            if (price > ALERT_THRESHOLD) {
+                System.out.println("!!! ALERT SYSTEM: Stock price exceeded threshold $" + ALERT_THRESHOLD + "!");
+            }
+        }
+    }
+
+
+    // =====================================================================
+    // 2. STRATEGY PATTERN DEMO (Behavioral)
+    // =====================================================================
+    private static void runStrategyDemo() {
+        System.out.println("\n--- 2. Strategy Pattern: Dynamic Payment Gateway ---");
+        ShoppingCart cart = new ShoppingCart();
+        
+        cart.setPaymentStrategy(new CreditCardPayment("4567"));
+        cart.checkout(55.99);
+
+        cart.setPaymentStrategy(new PayPalPayment("user@example.com"));
+        cart.checkout(12.00);
+    }
+
+    // Strategy Interfaces and Classes
+    interface PaymentStrategy { void pay(double amount); }
+    static class CreditCardPayment implements PaymentStrategy {
+        private String cardNumber;
+        public CreditCardPayment(String cardNumber) { this.cardNumber = cardNumber; }
+        public void pay(double amount) { System.out.println("Processing $" + amount + " via Credit Card ending in " + cardNumber.substring(cardNumber.length() - 4)); }
+    }
+    static class PayPalPayment implements PaymentStrategy {
+        private String email;
+        public PayPalPayment(String email) { this.email = email; }
+        public void pay(double amount) { System.out.println("Redirecting user to PayPal for $" + amount + " verification using " + email); }
+    }
+    static class ShoppingCart {
+        private PaymentStrategy paymentStrategy;
+        public void setPaymentStrategy(PaymentStrategy strategy) { this.paymentStrategy = strategy; }
+        public void checkout(double amount) {
+            if (paymentStrategy == null) { System.out.println("Error: Payment method not selected."); return; }
+            System.out.println("\n--- Checkout initiated for $" + amount + " ---");
+            paymentStrategy.pay(amount);
+        }
+    }
+
+
+    // =====================================================================
+    // 3. SINGLETON PATTERN DEMO (Creational)
+    // =====================================================================
+    private static void runSingletonDemo() {
+        System.out.println("\n--- 3. Singleton Pattern: Centralized Logging Service ---");
+        ApplicationLogger logger1 = ApplicationLogger.getInstance();
+        ApplicationLogger logger2 = ApplicationLogger.getInstance();
+        logger1.log("Application startup sequence initiated.");
+        logger2.log("Database connection established.");
+        System.out.println("Are loggers the same instance? " + (logger1 == logger2));
+    }
+
+    // Singleton Class
+    static class ApplicationLogger {
+        private static ApplicationLogger instance;
+        private ApplicationLogger() { System.out.println("Logger initialized."); }
+        public static ApplicationLogger getInstance() {
+            if (instance == null) {
+                synchronized (ApplicationLogger.class) {
+                    if (instance == null) { instance = new ApplicationLogger(); }
+                }
+            }
+            return instance;
+        }
+        public void log(String message) { System.out.println("[LOG] " + message + " (Logged by single instance)"); }
+    }
+
+
+    // =====================================================================
+    // 4. FACTORY METHOD PATTERN DEMO (Creational)
+    // =====================================================================
+    private static void runFactoryMethodDemo() {
+        System.out.println("\n--- 4. Factory Method Pattern: Multi-Platform Document Generation ---");
+        
+        DocumentGenerator pdfGen = new PdfGenerator();
+        pdfGen.generateReport();
+        
+        DocumentGenerator wordGen = new WordGenerator();
+        wordGen.generateReport();
+    }
+
+    // Product Interface & Concrete Products
+    interface Document { void create(); }
+    static class PdfDocument implements Document { public void create() { System.out.println("Created a professional, secure PDF document."); } }
+    static class WordDocument implements Document { public void create() { System.out.println("Created an editable DOCX document."); } }
+
+    // Creator (Factory) Abstract Class & Concrete Creators
+    abstract static class DocumentGenerator {
+        protected abstract Document createDocument();
+        public void generateReport() {
+            Document doc = createDocument();
+            System.out.print("Generator: Preparing to issue the report...");
+            doc.create();
+        }
+    }
+    static class PdfGenerator extends DocumentGenerator {
+        protected Document createDocument() { return new PdfDocument(); }
+    }
+    static class WordGenerator extends DocumentGenerator {
+        protected Document createDocument() { return new WordDocument(); }
+    }
+
+
+    // =====================================================================
+    // 5. ADAPTER PATTERN DEMO (Structural)
+    // =====================================================================
+    private static void runAdapterDemo() {
+        System.out.println("\n--- 5. Adapter Pattern: Integrating a Legacy API ---");
+        LegacyUserDatabase legacyUser = new LegacyUserDatabase();
+        UserProfile modernUser = new LegacyUserAdapter(legacyUser);
+        
+        System.out.println("Legacy data retrieved and adapted:");
+        System.out.println("Full Name (Adapted): " + modernUser.getFullName());
+        System.out.println("Email (Adapted): " + modernUser.getContactEmail());
+    }
+
+    // Target Interface
+    interface UserProfile { String getFullName(); String getContactEmail(); }
+    
+    // Adaptee (Legacy System)
+    static class LegacyUserDatabase {
+        public String getFirstName() { return "Jane"; }
+        public String getLastName() { return "Doe"; }
+        public String getLegacyContact() { return "jane.d@oldco.com"; }
+    }
+    
+    // Adapter
+    static class LegacyUserAdapter implements UserProfile {
+        private LegacyUserDatabase legacyUser;
+        public LegacyUserAdapter(LegacyUserDatabase user) { this.legacyUser = user; }
+        public String getFullName() { return legacyUser.getFirstName() + " " + legacyUser.getLastName(); }
+        public String getContactEmail() { return legacyUser.getLegacyContact(); }
+    }
+
+
+    // =====================================================================
+    // 6. DECORATOR PATTERN DEMO (Structural)
+    // =====================================================================
+    private static void runDecoratorDemo() {
+        System.out.println("\n--- 6. Decorator Pattern: Customizable Coffee Order System ---");
+        
+        Coffee espresso = new SimpleEspresso();
+        System.out.println("Order 1: " + espresso.getDescription() + " | Cost: $" + espresso.getCost());
+
+        Coffee milkCoffee = new MilkDecorator(espresso);
+        System.out.println("Order 2: " + milkCoffee.getDescription() + " | Cost: $" + milkCoffee.getCost());
+
+        Coffee fancyCoffee = new SyrupDecorator(milkCoffee);
+        System.out.println("Order 3: " + fancyCoffee.getDescription() + " | Cost: $" + fancyCoffee.getCost());
+    }
+
+    // Component Interface
+    interface Coffee { double getCost(); String getDescription(); }
+    
+    // Concrete Component
+    static class SimpleEspresso implements Coffee {
+        public double getCost() { return 2.50; }
+        public String getDescription() { return "Simple Espresso"; }
+    }
+    
+    // Base Decorator
+    abstract static class CoffeeDecorator implements Coffee {
+        protected Coffee decoratedCoffee;
+        public CoffeeDecorator(Coffee coffee) { this.decoratedCoffee = coffee; }
+        public double getCost() { return decoratedCoffee.getCost(); }
+        public String getDescription() { return decoratedCoffee.getDescription(); }
+    }
+    
+    // Concrete Decorators
+    static class MilkDecorator extends CoffeeDecorator {
+        public MilkDecorator(Coffee coffee) { super(coffee); }
+        public double getCost() { return super.getCost() + 0.50; }
+        public String getDescription() { return super.getDescription() + ", with Milk"; }
+    }
+    static class SyrupDecorator extends CoffeeDecorator {
+        public SyrupDecorator(Coffee coffee) { super(coffee); }
+        public double getCost() { return super.getCost() + 0.75; }
+        public String getDescription() { return super.getDescription() + ", with Vanilla Syrup"; }
+    }
+}
